@@ -1,6 +1,5 @@
 package com.nowcoder.community;
 
-import com.nowcoder.community.dao.Student;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.BeansException;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -21,7 +20,6 @@ class NowcoderApplicationTests implements ApplicationContextAware {
 
     @Test
     public void testApplicationContext() {
-        System.out.println(applicationContext.getBean(Student.class));
-    }
 
+    }
 }
