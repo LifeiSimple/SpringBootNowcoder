@@ -7,6 +7,10 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+
+/**
+ * 首页帖子展示，分页显示
+ */
 @Service
 public class DiscussPostService {
 
