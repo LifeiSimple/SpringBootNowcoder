@@ -10,6 +10,7 @@
         id, user_id, title, content, type, status, create_time, comment_count, score
     </sql>
 
+    <!--    status=2 为拉黑的帖子   -->
     <select id="selectDiscussPosts" resultType="DiscussPost">
         select <include refid="selectFields"></include>
         from discuss_post

@@ -1,37 +1,165 @@
 package com.nowcoder.community.controller;
 
+import com.google.code.kaptcha.Producer;
+import com.nowcoder.community.dao.LoginTicketMapper;
 import com.nowcoder.community.entity.User;
 import com.nowcoder.community.service.UserService;
 import com.nowcoder.community.util.CommunityConstant;
+import com.sun.deploy.net.HttpResponse;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 
+import javax.imageio.ImageIO;
+import javax.servlet.ServletOutputStream;
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.Map;
 
 @Controller
 public class LoginController implements CommunityConstant {
 
-    @Autowired
-    UserService userService;
+    private static final Logger logger = LoggerFactory.getLogger(LoginController.class);
 
-    // 访问注册页面
+    @Value("${server.servlet.context-path}")
+    private String contextPath;
+
+
+    @Autowired
+    private UserService userService;
+
+    @Autowired
+    private Producer kaptchaProducer;
+
+    // 访问注册页面，访问一个页面
     @RequestMapping(path = "/register", method = RequestMethod.GET)
     public String getRegisterPage() {
 
         return "/site/register";
     }
 
-    // 访问登录页面
+    // 访问登录页面，访问一个页面
     @RequestMapping(path = "/login", method = RequestMethod.GET)
     public String getLoginPage() {
 
         return "/site/login";
     }
 
+    // 访问修改密码页面，访问一个页面
+    @RequestMapping(path = "/forget", method = RequestMethod.GET)
+    public String forget() {
+        return "/site/forget";
+    }
+
+    /**
+     * 生成验证码
+     * @param response
+     * @param session
+     */
+    @RequestMapping(path = "/kaptcha", method = RequestMethod.GET)
+    public void getKaptcha(HttpServletResponse response, HttpSession session) {
+        // 生成验证码
+        String text = kaptchaProducer.createText();
+        BufferedImage image = kaptchaProducer.createImage(text);
+
+        // 将验证码存入 session
+        session.setAttribute("kaptcha", text);
+        // 将图片输出给 浏览器，response 由 springMVC 自动管理维护
+        response.setContentType("image/png");
+        try {
+            OutputStream outputStream = response.getOutputStream();
+            ImageIO.write(image, "png", outputStream);
+        } catch (IOException e) {
+            logger.error("响应验证码失败："+e.getMessage());
+        }
+    }
+
+    /**
+     * 处理登录请求
+     *
+     * @param username      用户名
+     * @param password      密码
+     * @param code          验证码
+     * @param rememberme    记住我
+     * @param model
+     * @param session       验证码存放于 session 中
+     * @param response
+     * @return
+     */
+    @RequestMapping(path = "/login", method = RequestMethod.POST)
+    public String login(String username, String password, String code, boolean rememberme,
+                        Model model, HttpSession session, HttpServletResponse response) {
+        // 检查验证码
+        String kaptcha = (String) session.getAttribute("kaptcha");
+        // 验证码不区分大小写
+        if (StringUtils.isBlank(kaptcha) || StringUtils.isBlank(code) || !kaptcha.equalsIgnoreCase(code)) {
+            model.addAttribute("codeMsg", "验证码不正确!");
+            return "/site/login";
+        }
+
+        // 检查账号,密码
+        // 存放过期时间，如果没有勾选上记住我，仍然保存到客户端，只是时间短一点
+        // 如果勾选上记住我，保存时间长一点
+        int expiredSeconds = rememberme ? REMEMBER_EXPIRED_SECONDS : DEFAULT_EXPIRED_SECONDS;
+
+        Map<String, Object> map = userService.login(username, password, expiredSeconds);
+        if (map.containsKey("ticket")) {
+            Cookie cookie = new Cookie("ticket", map.get("ticket").toString());
+            cookie.setPath(contextPath); // cookie 生效的路径
+            cookie.setMaxAge(expiredSeconds); // cookie 有效时间
+            response.addCookie(cookie); // 添加 cookie
+            return "redirect:/index";
+        } else {
+            model.addAttribute("usernameMsg", map.get("usernameMsg"));
+            model.addAttribute("passwordMsg", map.get("passwordMsg"));
+            return "/site/login";
+        }
+    }
+
+
+    /**
+     * 退出登录
+     */
+    @RequestMapping(path = "/logout", method = RequestMethod.GET)
+    public String logout(@CookieValue("ticket") String ticket) {
+        userService.logout(ticket);
+        return "redirect:/login"; // 重定向去 /login 默认是 GET 请求
+    }
+
+    /** todo
+     * 忘记密码
+     * @param model
+     * @param email
+     * @param code
+     * @param newpassword
+     * @return
+     */
+    @RequestMapping(path = "/forget", method = RequestMethod.POST)
+    public String forget(Model model, String email, String code, String newpassword) {
+
+
+        return "";
+    }
+
+
+    //todo 发送验证码
+
+
+
+    // 注册激活
     /**
      * 进行注册，成功会跳转到注册中间页面，显示发送了激活邮件，
      * 后续需要在邮件中点击激活链接进行激活

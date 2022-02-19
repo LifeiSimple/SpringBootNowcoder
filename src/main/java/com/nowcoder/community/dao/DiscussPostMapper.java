@@ -9,9 +9,10 @@ import java.util.List;
 @Mapper
 public interface DiscussPostMapper {
 
-    // 需要分页查询，首页分页，不需要 userId
-    // userId 用于用户查看
+    // 需要分页查询，首页分页实现不需要userId；userId 用于查看发帖用户
+
     // 需要动态 SQL
+    // userId=0 为首页帖子展示，分页处理
     List<DiscussPost> selectDiscussPosts(int userId, int offset, int limit);
 
 

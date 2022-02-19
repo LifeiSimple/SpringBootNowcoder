@@ -33,14 +33,18 @@ public class HomeController {
         page.setRows(discussPostService.findDiscussPostRows(0));
         page.setPath("/index");
 
+        // 首页所要展示的内容，以分页形式展示
         List<DiscussPost> list = discussPostService.findDiscussPosts(0, page.getOffset(), page.getLimit());
 
+        // List 中的每一项都是一个单独的键值对Map，用户和他所发的帖子
         List<Map<String, Object>> discussPosts = new ArrayList<>();
 
         if (list != null) {
             for (DiscussPost post : list) {
                 Map<String, Object> map = new HashMap<>();
                 map.put("post", post);
+
+                // 根据用户id查询User信息
                 User user = userService.findUserById(post.getUserId());
                 map.put("user", user);
                 discussPosts.add(map);
