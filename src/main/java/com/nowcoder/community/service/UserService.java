@@ -77,13 +77,15 @@ public class UserService implements CommunityConstant {
             map.put("codeMsg", "验证码错误");
             return map;
         } else {
-            userMapper.updatePassword(u.getId(), newpassword);
+            u.setPassword(CommunityUtil.md5(newpassword + u.getSalt()));
+            userMapper.updatePassword(u.getId(), u.getPassword());
         }
         return map;
     }
 
     // 生成验证码发送并返回验证码
-    public String generateCode(User user) {
+    public String generateCode(String email) {
+        User user = userMapper.selectByEmail(email);
         // 生成验证码
         String code = CommunityUtil.generateUUID().substring(0, 4);
         // 把验证码装填进网页，然后通过邮箱发送
@@ -262,5 +264,46 @@ public class UserService implements CommunityConstant {
         userMapper.updatePassword(user.getId(), newpassword);
     }
 
+
+    // 供拦截器调用 LoginTicketInterceptor.preHandler
+    public LoginTicket findLoginTicket(String ticket) {
+
+        return loginTicketMapper.selectByTicket(ticket);
+    }
+
+
+    // 用户更新头像
+    public int updateHeader(int userId, String headerUrl) {
+        return userMapper.updateHeader(userId, headerUrl);
+    }
+
+    // 修改密码
+    public Map<String, Object> updatePassword(int userId, String oldPassword, String newPassword) {
+        Map<String, Object> map = new HashMap<>();
+
+        // 空值处理
+        if (StringUtils.isBlank(oldPassword)) {
+            map.put("oldPasswordMsg", "原密码不能为空!");
+            return map;
+        }
+        if (StringUtils.isBlank(newPassword)) {
+            map.put("newPasswordMsg", "新密码不能为空!");
+            return map;
+        }
+
+        // 验证原始密码
+        User user = userMapper.selectById(userId);
+        oldPassword = CommunityUtil.md5(oldPassword + user.getSalt());
+        if (!user.getPassword().equals(oldPassword)) {
+            map.put("oldPasswordMsg", "原密码输入有误!");
+            return map;
+        }
+
+        // 更新密码
+        newPassword = CommunityUtil.md5(newPassword + user.getSalt());
+        userMapper.updatePassword(userId, newPassword);
+
+        return map;
+    }
 
 }

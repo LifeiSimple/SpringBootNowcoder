@@ -1,11 +1,10 @@
 package com.nowcoder.community.controller;
 
 import com.google.code.kaptcha.Producer;
-import com.nowcoder.community.dao.LoginTicketMapper;
 import com.nowcoder.community.entity.User;
 import com.nowcoder.community.service.UserService;
 import com.nowcoder.community.util.CommunityConstant;
-import com.sun.deploy.net.HttpResponse;
+import com.nowcoder.community.util.CommunityUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,9 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 import javax.imageio.ImageIO;
-import javax.servlet.ServletOutputStream;
 import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.awt.image.BufferedImage;
@@ -66,6 +63,7 @@ public class LoginController implements CommunityConstant {
 
     /**
      * 生成验证码
+     *
      * @param response
      * @param session
      */
@@ -83,19 +81,19 @@ public class LoginController implements CommunityConstant {
             OutputStream outputStream = response.getOutputStream();
             ImageIO.write(image, "png", outputStream);
         } catch (IOException e) {
-            logger.error("响应验证码失败："+e.getMessage());
+            logger.error("响应验证码失败：" + e.getMessage());
         }
     }
 
     /**
      * 处理登录请求
      *
-     * @param username      用户名
-     * @param password      密码
-     * @param code          验证码
-     * @param rememberme    记住我
+     * @param username   用户名
+     * @param password   密码
+     * @param code       验证码
+     * @param rememberme 记住我
      * @param model
-     * @param session       验证码存放于 session 中
+     * @param session    验证码存放于 session 中
      * @param response
      * @return
      */
@@ -140,9 +138,21 @@ public class LoginController implements CommunityConstant {
     }
 
 
+    // 发送验证码
+    @RequestMapping(path = "/forget/emailcode", method = RequestMethod.GET)
+    public String generateCode(Model model, String email, String code, String newpassword,
+                               HttpSession session) {
+        String correct_code = userService.generateCode(email);
+        session.setAttribute("email", correct_code);
+        session.setMaxInactiveInterval(60 * 5);
 
-    /** todo
+        return "/site/forget";
+    }
+
+    /**
+     * todo
      * 忘记密码
+     *
      * @param model
      * @param email
      * @param code
@@ -151,12 +161,11 @@ public class LoginController implements CommunityConstant {
      */
     @RequestMapping(path = "/forget", method = RequestMethod.POST)
     public String forget(Model model, String email, String code, String newpassword) {
-        String correct_code = "";
+        String correct_code = "1234";
         Map<String, Object> map = userService.forget(email, code, newpassword, correct_code);
-        if (map == null || map.isEmpty())
-        {
+        if (map == null || map.isEmpty()) {
             return "/site/login";
-        }else {
+        } else {
             model.addAttribute("emailMsg", map.get("emailMsg"));
             model.addAttribute("codeMsg", map.get("codeMsg"));
             model.addAttribute("passwordMsg", map.get("passwordMsg"));
@@ -165,9 +174,11 @@ public class LoginController implements CommunityConstant {
     }
 
     // 注册激活
+
     /**
      * 进行注册，成功会跳转到注册中间页面，显示发送了激活邮件，
      * 后续需要在邮件中点击激活链接进行激活
+     *
      * @param model
      * @param user
      * @return
@@ -191,9 +202,10 @@ public class LoginController implements CommunityConstant {
 
     /**
      * 激活邮箱中的激活链接，点击激活链接完成激活操作
+     *
      * @param model
      * @param userId 用户id
-     * @param code 激活码
+     * @param code   激活码
      * @return
      */
     // http://localhost:8080/community/activation/101/code 请求路径格式

@@ -20,7 +20,7 @@ public class MyTest {
     public void generateCode() {
         User user = new User();
         user.setEmail("wangjiaxiang97@foxmail.com");
-        String code = userService.generateCode(user);
+        String code = userService.generateCode(user.getEmail());
 
         System.out.println(code);
     }

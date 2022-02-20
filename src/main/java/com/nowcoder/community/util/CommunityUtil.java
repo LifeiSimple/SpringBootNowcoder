@@ -18,6 +18,7 @@ public class CommunityUtil {
     }
 
 
+
     // MD5加密
     // hello -> abc123def456
     // hello + 3e4a8 -> abd123fdf341d
