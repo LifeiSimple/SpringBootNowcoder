@@ -37,4 +37,5 @@ public class MailTests {
         mailClient.sendMail("wangjiaxiang97@foxmail.com", "HTML", s);
     }
 
+
 }

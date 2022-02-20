@@ -46,6 +46,54 @@ public class UserService implements CommunityConstant {
         return userMapper.selectById(id);
     }
 
+    /**
+     * 处理用户忘记密码
+     * 通过Map<String, Object> 来处理多种情况，
+     * 如果注册有问题，map 中包含对问题的描述
+     * 如果没有问题，返回一个空 map
+     */
+    public Map<String, Object> forget(String email, String code, String newpassword, String correct_code) {
+        Map<String, Object> map = new HashMap<>();
+
+        if (StringUtils.isBlank(email)) {
+            map.put("emailMsg", "邮箱不能为空");
+            return map;
+        }
+        // 先验证邮箱是否存在
+        User u = userMapper.selectByEmail(email); // 如果查到的账号存在，u!=null；如果不存在，则u==null
+        if (u == null) {
+            map.put("emailMsg", "该邮箱不存在!");
+            return map;
+        }
+        if (StringUtils.isBlank(code)) {
+            map.put("codeMsg", "验证码不能为空");
+            return map;
+        }
+        if (StringUtils.isBlank(newpassword)) {
+            map.put("passwordMsg", "密码不能为空");
+            return map;
+        }
+        if (!correct_code.equals(code)) {
+            map.put("codeMsg", "验证码错误");
+            return map;
+        } else {
+            userMapper.updatePassword(u.getId(), newpassword);
+        }
+        return map;
+    }
+
+    // 生成验证码发送并返回验证码
+    public String generateCode(User user) {
+        // 生成验证码
+        String code = CommunityUtil.generateUUID().substring(0, 4);
+        // 把验证码装填进网页，然后通过邮箱发送
+        Context context = new Context();
+        context.setVariable("email", user.getEmail()); // 传给前端
+        context.setVariable("code", code); // 传给前端
+        String content = templateEngine.process("/mail/forget", context);
+        mailClient.sendMail(user.getEmail(), "忘记密码", content);
+        return code;
+    }
 
     /**
      * 处理用户注册
@@ -120,7 +168,7 @@ public class UserService implements CommunityConstant {
 
     /**
      * 用户激活判断
-     *
+     * <p>
      * 激活的几种情况
      * 1. 激活成功
      * 2. 激活成功后，重复激活
@@ -143,8 +191,9 @@ public class UserService implements CommunityConstant {
 
     /**
      * 用户登录
-     * @param username 用户名
-     * @param password 用户密码
+     *
+     * @param username       用户名
+     * @param password       用户密码
      * @param expiredSeconds 过期时间
      * @return Map 包装的多种用户登录处理结果状态
      */
@@ -196,6 +245,7 @@ public class UserService implements CommunityConstant {
 
     /**
      * 退出登录
+     *
      * @param ticket 用户凭证
      */
     public void logout(String ticket) {
@@ -204,7 +254,8 @@ public class UserService implements CommunityConstant {
 
     /**
      * 修改用户密码
-     * @param user 用户
+     *
+     * @param user        用户
      * @param newpassword 新密码
      */
     public void updatePassword(User user, String newpassword) {

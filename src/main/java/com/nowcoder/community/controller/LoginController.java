@@ -139,6 +139,8 @@ public class LoginController implements CommunityConstant {
         return "redirect:/login"; // 重定向去 /login 默认是 GET 请求
     }
 
+
+
     /** todo
      * 忘记密码
      * @param model
@@ -149,15 +151,18 @@ public class LoginController implements CommunityConstant {
      */
     @RequestMapping(path = "/forget", method = RequestMethod.POST)
     public String forget(Model model, String email, String code, String newpassword) {
-
-
-        return "";
+        String correct_code = "";
+        Map<String, Object> map = userService.forget(email, code, newpassword, correct_code);
+        if (map == null || map.isEmpty())
+        {
+            return "/site/login";
+        }else {
+            model.addAttribute("emailMsg", map.get("emailMsg"));
+            model.addAttribute("codeMsg", map.get("codeMsg"));
+            model.addAttribute("passwordMsg", map.get("passwordMsg"));
+            return "/site/forget";
+        }
     }
-
-
-    //todo 发送验证码
-
-
 
     // 注册激活
     /**
