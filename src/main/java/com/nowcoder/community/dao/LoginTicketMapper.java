@@ -6,6 +6,7 @@ import org.apache.ibatis.annotations.*;
 @Mapper
 public interface LoginTicketMapper {
 
+    // 使用注解形式来写SQL语句
 
     @Insert("insert into login_ticket(user_id,ticket,status,expired) " +
             "values(#{userId},#{ticket},#{status},#{expired})")
