@@ -1,5 +1,6 @@
 package com.nowcoder.community;
 
+import com.nowcoder.community.util.CommunityUtil;
 import com.nowcoder.community.util.MailClient;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -35,6 +36,17 @@ public class MailTests {
         System.out.println(s);
 
         mailClient.sendMail("wangjiaxiang97@foxmail.com", "HTML", s);
+    }
+
+    @Test
+    public void resetPassword() {
+        // 发送邮件
+        Context context = new Context();
+        context.setVariable("email", "wangjiaxiang97@foxmail.com");
+        String code = CommunityUtil.generateUUID().substring(0, 4);
+        context.setVariable("verifyCode", code);
+        String content = templateEngine.process("/mail/forget", context);
+        mailClient.sendMail("wangjiaxiang97@foxmail.com", "找回密码", content);
     }
 
 

@@ -5,6 +5,7 @@ import com.nowcoder.community.entity.User;
 import com.nowcoder.community.service.UserService;
 import com.nowcoder.community.util.CommunityConstant;
 import com.nowcoder.community.util.CommunityUtil;
+import com.nowcoder.community.util.MailClient;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,10 +13,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.CookieValue;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.*;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.Context;
 
 import javax.imageio.ImageIO;
 import javax.servlet.http.Cookie;
@@ -34,6 +34,11 @@ public class LoginController implements CommunityConstant {
     @Value("${server.servlet.context-path}")
     private String contextPath;
 
+    @Autowired
+    private MailClient mailClient;
+
+    @Autowired
+    private TemplateEngine templateEngine;
 
     @Autowired
     private UserService userService;
@@ -138,43 +143,52 @@ public class LoginController implements CommunityConstant {
     }
 
 
-    // 发送验证码
-    @RequestMapping(path = "/forget/emailcode", method = RequestMethod.GET)
-    public String generateCode(Model model, String email, String code, String newpassword,
-                               HttpSession session) {
-        String correct_code = userService.generateCode(email);
-        session.setAttribute("email", correct_code);
-        session.setMaxInactiveInterval(60 * 5);
+    // 获取验证码
+    @RequestMapping(path = "/forget/code", method = RequestMethod.GET)
+    @ResponseBody
+    public String getForgetCode(String email, HttpSession session) {
+        if (StringUtils.isBlank(email)) {
+            return CommunityUtil.getJSONString(1, "邮箱不能为空！");
+        }
 
-        return "/site/forget";
+//        System.out.println(email);
+
+        // 发送邮件
+        Context context = new Context();
+        context.setVariable("email", email);
+        String code = CommunityUtil.generateUUID().substring(0, 4);
+        context.setVariable("verifyCode", code);
+        String content = templateEngine.process("/mail/forget", context);
+        mailClient.sendMail(email, "找回密码", content);
+
+//        System.out.println(code);
+
+        // 保存验证码
+        session.setAttribute("verifyCode", code);
+
+        return CommunityUtil.getJSONString(0);
     }
 
-    /**
-     * todo
-     * 忘记密码
-     *
-     * @param model
-     * @param email
-     * @param code
-     * @param newpassword
-     * @return
-     */
-    @RequestMapping(path = "/forget", method = RequestMethod.POST)
-    public String forget(Model model, String email, String code, String newpassword) {
-        String correct_code = "1234";
-        Map<String, Object> map = userService.forget(email, code, newpassword, correct_code);
-        if (map == null || map.isEmpty()) {
-            return "/site/login";
+    // 重置密码
+    @RequestMapping(path = "/forget/password", method = RequestMethod.POST)
+    public String resetPassword(String email, String verifyCode, String password, Model model, HttpSession session) {
+        String code = (String) session.getAttribute("verifyCode");
+        if (StringUtils.isBlank(verifyCode) || StringUtils.isBlank(code) || !code.equalsIgnoreCase(verifyCode)) {
+            model.addAttribute("codeMsg", "验证码错误!");
+            return "/site/forget";
+        }
+
+        Map<String, Object> map = userService.resetPassword(email, password);
+        if (map.containsKey("user")) {
+            return "redirect:/login";
         } else {
             model.addAttribute("emailMsg", map.get("emailMsg"));
-            model.addAttribute("codeMsg", map.get("codeMsg"));
             model.addAttribute("passwordMsg", map.get("passwordMsg"));
             return "/site/forget";
         }
     }
 
     // 注册激活
-
     /**
      * 进行注册，成功会跳转到注册中间页面，显示发送了激活邮件，
      * 后续需要在邮件中点击激活链接进行激活

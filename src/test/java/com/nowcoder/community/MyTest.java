@@ -13,17 +13,6 @@ import org.springframework.test.context.junit4.SpringRunner;
 @SpringBootTest
 @ContextConfiguration(classes = NowcoderApplication.class)
 public class MyTest {
-    @Autowired
-    UserService userService;
-
-    @Test
-    public void generateCode() {
-        User user = new User();
-        user.setEmail("wangjiaxiang97@foxmail.com");
-        String code = userService.generateCode(user.getEmail());
-
-        System.out.println(code);
-    }
 
 
 }
